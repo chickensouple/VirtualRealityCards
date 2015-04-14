@@ -22,8 +22,8 @@ int main() {
 	BlobDetector::detect(image, 
 		std::vector<std::array<float, 6>>{
 			{170, 10, 150, 255, 100, 255},
-			{100, 150, 0, 255, 0, 255}
-		}, 20);
+			// {100, 150, 0, 255, 0, 255}
+		}, 0);
 
 	// cv::Mat thresholded = HsvThreshold::threshold(image,
 	// 	std::array<float, 6>{{150, 30, 25, 100, 25, 250}});
