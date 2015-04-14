@@ -1,4 +1,5 @@
 #include <opencv2/core/core.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -17,8 +18,14 @@ using namespace cv;
 int main() {
 	cv::Mat image;
 	image = cv::imread("images/im5.jpg", CV_LOAD_IMAGE_COLOR);
-	if(! image.data ) {
-		std::cout <<  "Could not open or find the image" << std::endl ;
+	if(!image.data) {
+		std::cout <<  "Could not open or find the image" << std::endl;
+		return -1;
+	}
+	cv::Mat displayedIm;
+	displayedIm = cv::imread("images/chicken.jpg", CV_LOAD_IMAGE_COLOR);
+	if (!displayedIm.data) {
+		std::cout <<  "Could not open or find the image" << std::endl;
 		return -1;
 	}
 
@@ -61,6 +68,7 @@ int main() {
 	blueBlobs.resize(3);
 	redBlobs.resize(1);
 
+	// getting blobs in clockwise order
 	std::array<int, 2> centroid{{0, 0}};
 	for (auto& blob : blueBlobs) {
 		centroid[0] += blob.row;
@@ -87,8 +95,30 @@ int main() {
 			return diff1 < diff2;
 		});
 
+	// printf("start Blob: %d, %d\n", redBlobs[0].col, redBlobs[0].row);
+	// for (auto& blob : blueBlobs) {
+	// 	printf("%d, %d\n", blob.col, blob.row);
+	// }
 
+	// calculating homography
+	std::vector<cv::Point2f> imagePts;
+	std::vector<cv::Point2f> realPts;
 
+	imagePts.push_back(cv::Point2f{(float)redBlobs[0].col, (float)redBlobs[0].row});
+	for (auto& blob: blueBlobs) {
+		imagePts.push_back(cv::Point2f{(float)blob.col, (float)blob.row});
+	}
+	realPts.push_back(cv::Point2f{0, 0});
+	realPts.push_back(cv::Point2f{displayedIm.cols, 0});
+	realPts.push_back(cv::Point2f{displayedIm.cols, displayedIm.rows});
+	realPts.push_back(cv::Point2f{0, displayedIm.rows});
+
+	cv::Mat homography = cv::findHomography(realPts, imagePts);
+	std::cout << homography << '\n';
+
+	cv::Mat transformedIm;
+	cv::warpPerspective(displayedIm, transformedIm, homography, image.size());
+	imshow("transformed", transformedIm);
 
 
 	cv::waitKey(0);
