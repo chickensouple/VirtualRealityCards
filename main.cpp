@@ -72,15 +72,15 @@ int main() {
 	}
 	centroid[0] /= (blueBlobs.size() + redBlobs.size());
 	centroid[1] /= (blueBlobs.size() + redBlobs.size());
-	float startAngle = std::atan2(redBlobs[0] - centroid[0],
-		redBlobs[1] - centroid[1]);
+	float startAngle = std::atan2(redBlobs[0].row - centroid[0],
+		redBlobs[0].col - centroid[1]);
 	std::sort(blueBlobs.begin(), blueBlobs.end(),
 		[&](const BlobDetector::Blob& A,
 			const BlobDetector::Blob& B) {
-			float angle1 = std::atan2(A[0] - centroid[0],
-				A[1] - centroid[1]);
-			float angle2 = std::atan2(A[0] - centroid[0],
-				A[1] - centroid[1]);
+			float angle1 = std::atan2(A.row - centroid[0],
+				A.col - centroid[1]);
+			float angle2 = std::atan2(A.row - centroid[0],
+				A.col - centroid[1]);
 		
 			float diff1 = angle::wrapToTwoPi(angle::angleDiffRadians(angle1, startAngle));
 			float diff2 = angle::wrapToTwoPi(angle::angleDiffRadians(angle2, startAngle));
