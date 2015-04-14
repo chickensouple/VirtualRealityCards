@@ -17,7 +17,7 @@ findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 
 std::array<int, 2> findCentroid(const std::vector<std::array<int, 2>>& points);
 
-std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 6>>& thresholds) {
+std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 6>>& thresholds, int minSize) {
 
 	std::vector<Blob> blobs;
 
@@ -38,8 +38,10 @@ std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 
 					hsvVal(2) < thresh[5]) {
 
 					std::vector<std::array<int, 2>> blob = findAndMarkBlob(im, marked, row, col, i, thresh);
-					std::array<int, 2> center = findCentroid(blob);
-					blobs.push_back({center[0], center[1], (int)blob.size()});
+					if (blob.size() > minSize) {
+						std::array<int, 2> center = findCentroid(blob);
+						blobs.push_back({center[0], center[1], (int)blob.size()});
+					}
 
 					// temp.at<cv::Vec3b>(row, col) = cv::Vec3b{0, 0, 255};
 				}
@@ -49,8 +51,8 @@ std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 
 	std::cout << "found " << blobs.size() << " blobs\n";
 
 	cv::imshow("original", im);
-	// cv::imshow("color map", temp);
-	// cv::waitKey(0);
+	
+
 	return blobs;
 }
 
@@ -59,16 +61,16 @@ findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 	int rowStart, int colStart, int threshNum,
 	const std::array<float, 6>& thresh) {
 
-	std::cout << "finding and marking\n";
 	std::vector<std::array<int, 2>> ret;
 	std::vector<std::array<int, 2>> toBeProcessed;
 	marked.at<uint8_t>(rowStart, colStart) = threshNum;
 	toBeProcessed.push_back({{rowStart, colStart}});
 
 	while (!toBeProcessed.empty()) {
-		std::array<int, 2>& curr = toBeProcessed.back();
+		std::array<int, 2> curr = toBeProcessed.back();
 		toBeProcessed.pop_back();
 		ret.push_back(curr);
+		// std::cout << curr[0] << '\t' << curr[1] << '\n';
 
 		for (int row = -1; row <= 1; row++) {
 			for (int col = -1; col <= 1; col++) {
@@ -78,21 +80,20 @@ findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 					curr[1] + col < im.cols) {
 
 					cv::Vec3b hsvVal = im.at<cv::Vec3b>(curr[0] + row, curr[1] + col);
-					if (marked.at<uint8_t>(row, col) != threshNum &&
+					if (marked.at<uint8_t>(curr[0] + row, curr[1] + col) != threshNum &&
 						angle::angleBetween(thresh[0], thresh[1], hsvVal(0)) &&
 						hsvVal(1) > thresh[2] &&
 						hsvVal(1) < thresh[3] &&
 						hsvVal(2) > thresh[4] &&
 						hsvVal(2) < thresh[5]) {
 
-						marked.at<uint8_t>(rowStart, colStart) = threshNum;
+						marked.at<uint8_t>(curr[0] + row, curr[1] + col) = threshNum;
 						toBeProcessed.push_back({{curr[0] + row, curr[1] + col}});
 					}
 				}
 			}
 		}
 	}
-	std::cout << "found and marked\n";
 	return ret;
 }
 
