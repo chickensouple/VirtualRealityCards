@@ -4,6 +4,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <stdint.h>
 #include "LineDetector.hpp"
 #include "BlobDetector.hpp"
@@ -19,23 +20,56 @@ int main() {
 		return -1;
 	}
 
-	BlobDetector::detect(image, 
-		std::vector<std::array<float, 6>>{
-			{170, 10, 150, 255, 100, 255},
-			// {100, 150, 0, 255, 0, 255}
-		}, 0);
+	std::array<float, 6> redThresh{{170, 10, 150, 255, 100, 255}};
+	std::array<float, 6> blueThresh{{100, 150, 0, 255, 0, 255}};
 
-	// cv::Mat thresholded = HsvThreshold::threshold(image,
-	// 	std::array<float, 6>{{150, 30, 25, 100, 25, 250}});
-	// cv::imshow("thresholded", thresholded);
-	// LineDetector::detect(thresholded, 400, 400);
+	std::vector<BlobDetector::Blob> blobs = BlobDetector::detect(image, 
+		std::vector<std::array<float, 6>>{redThresh, blueThresh},
+		100);
 
-	// idea: instead of grayscale, take just the red channel if we have a red border
-	// cv::Mat grayScale;
-	// cv::cvtColor(image, grayScale, CV_BGR2GRAY);
-	// cv::imshow("grayScale", grayScale);
-	// grayScale.convertTo(grayScale, CV_32F);
-	// LineDetector::detect(grayScale, 200, 180);
+	std::vector<BlobDetector::Blob> redBlobs;
+	std::vector<BlobDetector::Blob> blueBlobs;
+	for (auto& blob : blobs) {
+		if (blob.threshNum == 0) {
+			redBlobs.push_back(blob);
+		} else {
+			blueBlobs.push_back(blob);
+		}
+	}
+
+	if (blueBlobs.size() < 3) {
+		printf("Didn't find enough blue blobs, only found %d\n",
+			blueBlobs.size());
+	}
+	if (redBlobs.size() < 1) {
+		printf("Didn't find enough red blobs, only found%d\n", redBlobs.size());
+	}
+
+	std::sort(blueBlobs.begin(), blueBlobs.end(),
+		[](const BlobDetector::Blob& A, 
+			const BlobDetector::Blob& B) {
+			return A.numPixels > B.numPixels;
+		});
+	std::sort(redBlobs.begin(), redBlobs.end(),
+		[](const BlobDetector::Blob& A, 
+			const BlobDetector::Blob& B) {
+			return A.numPixels > B.numPixels;
+		});
+
+	blueBlobs.resize(3);
+	redBlobs.resize(1);
+
+	std::array<int, 2> centroid{{0, 0}};
+	for (auto& blob : blueBlobs) {
+		centroid[0] += blob.row;
+		centroid[1] += blob.col;
+	}
+	for (auto& blob : redBlobs) {
+		centroid[0] += blob.row;
+		centroid[1] += blob.col;
+	}
+
+
 
 	cv::waitKey(0);
 	return 0;

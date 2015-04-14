@@ -28,7 +28,7 @@ std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 
 	std::vector<Blob> blobs;
 
 	cv::Mat hsv;
-	cv::Mat temp(im.rows, im.cols, CV_8UC3, cv::Scalar(0, 0, 0));
+	// cv::Mat temp(im.rows, im.cols, CV_8UC3, cv::Scalar(0, 0, 0));
 	cv::cvtColor(im, hsv, CV_BGR2HSV);
 	cv::Mat marked(im.rows, im.cols, CV_8UC1, cv::Scalar(255));
 	for (int row = 0; row < hsv.rows; row++) {
@@ -46,29 +46,33 @@ std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 
 					std::vector<std::array<int, 2>> blob = findAndMarkBlob(hsv, marked, row, col, i, thresh);
 					if (blob.size() > minSize) {
 						std::array<int, 2> center = findCentroid(blob);
-						blobs.push_back({center[0], center[1], (int)blob.size(), i});
+						blobs.push_back({center[0], center[1], (int)blob.size(), (int)i});
 					}
 
 				}
-				temp.at<cv::Vec3b>(row, col) = cv::Vec3b{255, 255, 255};
+				// if (angle::angleBetween(thresh[0], thresh[1], hsvVal(0)) &&
+				// 	hsvVal(1) > thresh[2] &&
+				// 	hsvVal(1) < thresh[3] &&
+				// 	hsvVal(2) > thresh[4] &&
+				// 	hsvVal(2) < thresh[5]) {
+				// 	temp.at<cv::Vec3b>(row, col) = cv::Vec3b{255, 255, 255};
+				// }
 			}
 		}
 	}
-	std::cout << "found " << blobs.size() << " blobs\n";
+	// std::cout << "found " << blobs.size() << " blobs\n";
 
-	cv::imshow("original", im);
-	cv::Mat imCpy = im;
-	for (auto& blob : blobs) {
-		cv::circle(imCpy, cv::Point{blob.col, blob.row}, 10, cv::Scalar(0, 0, 255));
-		printf("Blob -- threshNum: %d at (%d, %d) of size %d\n", blob.threshNum,
-			blob.row, blob.col, blob.numPixels);
-	}
+	// cv::imshow("original", im);
+	// cv::Mat imCpy = im;
+	// for (auto& blob : blobs) {
+	// 	cv::circle(imCpy, cv::Point{blob.col, blob.row}, 10, cv::Scalar(0, 0, 255));
+	// 	printf("Blob -- threshNum: %d at (%d, %d) of size %d\n", blob.threshNum,
+	// 		blob.row, blob.col, blob.numPixels);
+	// }
 
-	cv::namedWindow("blobs");
-	cv::setMouseCallback("blobs", my_mouse_callback, &imCpy);
-	cv::imshow("blobs", imCpy);
+	// cv::imshow("blobs", imCpy);
 
-	cv::imshow("thresholded", temp);
+	// cv::imshow("thresholded", temp);
 
 	return blobs;
 }
@@ -87,10 +91,9 @@ findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 		std::array<int, 2> curr = toBeProcessed.back();
 		toBeProcessed.pop_back();
 		ret.push_back(curr);
-		// std::cout << curr[0] << '\t' << curr[1] << '\n';
 
-		for (int row = -1; row <= 1; row++) {
-			for (int col = -1; col <= 1; col++) {
+		for (int row = -3; row <= 3; row++) {
+			for (int col = -3; col <= 3; col++) {
 				if (curr[0] + row >= 0 &&
 					curr[0] + row < im.rows &&
 					curr[1] + col >= 0 &&
