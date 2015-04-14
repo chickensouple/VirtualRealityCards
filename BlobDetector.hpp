@@ -11,7 +11,9 @@ struct Blob {
 	int numPixels; // size of blob
 };
 
-std::vector<Blob> findBlobs(const cv::Mat& im);
+std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 6>>& thresholds);
+
+std::vector<Blob> detect(const cv::Mat& mag, const cv::Mat& orientation);
 
 }
 

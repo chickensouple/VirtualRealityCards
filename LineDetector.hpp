@@ -7,7 +7,8 @@
 
 namespace LineDetector {
 
-std::vector<std::array<float, 2>> detect(const cv::Mat& im);
+std::vector<std::array<float, 2>> detect(const cv::Mat& im, 
+	int numRadiusBins = 100, int numAngleBins = 100);
 
 
 }

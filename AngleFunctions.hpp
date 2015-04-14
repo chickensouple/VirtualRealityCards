@@ -47,6 +47,22 @@ namespace angle {
 	}
 
 	/**
+	 * @brief wraps an angle in radians to the range 0 to 2 * PI
+	 */
+	inline float wrapToTwoPi(float angle) {
+		if (angle < 0) {
+			do {
+				angle += 2 * M_PI;
+			} while (angle < 0);
+		} else if (angle >= 2 * M_PI) {
+			do {
+				angle -= 2 * M_PI;
+			} while (angle >= 2 * M_PI);
+		}
+		return angle;
+	}
+
+	/**
 	 * @brief calculates difference between two angles
 	 * @param angle1 first angle in range 0-360
 	 * @param angle2 second angle in range 0-360
@@ -54,9 +70,16 @@ namespace angle {
 	 */
 	inline float angleDiffDegrees(float angle1, float angle2) {
 		float diff = angle1 - angle2;
-		std::cout << "angles: " << angle1 << '\t' << angle2 << '\n';
-		std::cout << "diff: " << diff << '\n';
 		return wrapTo180(std::fabs(diff));
+	}
+
+
+	inline float radToDeg(float angle) {
+		return angle * 180 / M_PI;
+	}
+
+	inline float degToRad(float angle) {
+		return angle * M_PI / 180;
 	}
 
 }
