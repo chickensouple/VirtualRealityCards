@@ -7,7 +7,7 @@
 namespace BlobDetector {
 
 struct Blob {
-	int x, y; // location of blob
+	int row, col; // location of blob
 	int numPixels; // size of blob
 };
 

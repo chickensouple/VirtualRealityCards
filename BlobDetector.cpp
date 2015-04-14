@@ -15,7 +15,11 @@ findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 	int rowStart, int colStart, int threshNum,
 	const std::array<float, 6>& thresh);
 
+std::array<int, 2> findCentroid(const std::vector<std::array<int, 2>>& points);
+
 std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 6>>& thresholds) {
+
+	std::vector<Blob> blobs;
 
 	cv::Mat hsv;
 	// cv::Mat temp(im.rows, im.cols, CV_8UC3, cv::Scalar(0, 0, 0));
@@ -24,8 +28,8 @@ std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 
 	for (int row = 0; row < hsv.rows; row++) {
 		for (int col = 0; col < hsv.cols; col++) {
 			cv::Vec3b hsvVal = hsv.at<cv::Vec3b>(row, col);
-			for (int i = 0; i < threshold.size(); ++i) {
-				std::array<float, 6>& thresh = thresholds[i];
+			for (size_t i = 0; i < thresholds.size(); ++i) {
+				const std::array<float, 6>& thresh = thresholds[i];
 				if (marked.at<uint8_t>(row, col) == 255 &&
 					angle::angleBetween(thresh[0], thresh[1], hsvVal(0)) &&
 					hsvVal(1) > thresh[2] &&
@@ -33,24 +37,29 @@ std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 
 					hsvVal(2) > thresh[4] &&
 					hsvVal(2) < thresh[5]) {
 
-					findAndMarkBlob(im, marked, row, col);
+					std::vector<std::array<int, 2>> blob = findAndMarkBlob(im, marked, row, col, i, thresh);
+					std::array<int, 2> center = findCentroid(blob);
+					blobs.push_back({center[0], center[1], (int)blob.size()});
 
 					// temp.at<cv::Vec3b>(row, col) = cv::Vec3b{0, 0, 255};
 				}
 			}
 		}
 	}
+	std::cout << "found " << blobs.size() << " blobs\n";
 
 	cv::imshow("original", im);
-	cv::imshow("color map", temp);
+	// cv::imshow("color map", temp);
 	// cv::waitKey(0);
-	return std::vector<Blob>();
+	return blobs;
 }
 
 std::vector<std::array<int, 2>>
 findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 	int rowStart, int colStart, int threshNum,
 	const std::array<float, 6>& thresh) {
+
+	std::cout << "finding and marking\n";
 	std::vector<std::array<int, 2>> ret;
 	std::vector<std::array<int, 2>> toBeProcessed;
 	marked.at<uint8_t>(rowStart, colStart) = threshNum;
@@ -77,11 +86,26 @@ findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 						hsvVal(2) < thresh[5]) {
 
 						marked.at<uint8_t>(rowStart, colStart) = threshNum;
+						toBeProcessed.push_back({{curr[0] + row, curr[1] + col}});
 					}
 				}
 			}
 		}
 	}
+	std::cout << "found and marked\n";
+	return ret;
+}
+
+std::array<int, 2> findCentroid(const std::vector<std::array<int, 2>>& points) {
+	std::array<int, 2> ret{{0, 0}};
+	for (const auto& point : points) {
+		ret[0] += point[0];
+		ret[1] += point[1];
+	}
+	ret[0] /= points.size();
+	ret[1] /= points.size();
+
+	return ret;
 }
 
 }
