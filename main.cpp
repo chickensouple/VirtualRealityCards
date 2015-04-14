@@ -5,10 +5,12 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 #include <stdint.h>
 #include "LineDetector.hpp"
 #include "BlobDetector.hpp"
 #include "HsvThreshold.hpp"
+#include "AngleFunctions.hpp"
 
 using namespace cv;
 
@@ -68,6 +70,24 @@ int main() {
 		centroid[0] += blob.row;
 		centroid[1] += blob.col;
 	}
+	centroid[0] /= (blueBlobs.size() + redBlobs.size());
+	centroid[1] /= (blueBlobs.size() + redBlobs.size());
+	float startAngle = std::atan2(redBlobs[0] - centroid[0],
+		redBlobs[1] - centroid[1]);
+	std::sort(blueBlobs.begin(), blueBlobs.end(),
+		[&](const BlobDetector::Blob& A,
+			const BlobDetector::Blob& B) {
+			float angle1 = std::atan2(A[0] - centroid[0],
+				A[1] - centroid[1]);
+			float angle2 = std::atan2(A[0] - centroid[0],
+				A[1] - centroid[1]);
+		
+			float diff1 = angle::wrapToTwoPi(angle::angleDiffRadians(angle1, startAngle));
+			float diff2 = angle::wrapToTwoPi(angle::angleDiffRadians(angle2, startAngle));
+			return diff1 < diff2;
+		});
+
+
 
 
 

@@ -73,6 +73,14 @@ namespace angle {
 		return wrapTo180(std::fabs(diff));
 	}
 
+	inline float angleDiffRadians(float angle1, float angle2) {
+		float diff = angle1 - angle2;
+		if (std::fabs(diff) > M_PI) {
+			diff -= (diff > 0) ? M_PI*2 : M_PI*-2;
+		}
+		return diff;
+	}
+
 
 	inline float radToDeg(float angle) {
 		return angle * 180 / M_PI;
