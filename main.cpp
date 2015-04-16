@@ -118,8 +118,20 @@ int main() {
 
 	cv::Mat transformedIm;
 	cv::warpPerspective(displayedIm, transformedIm, homography, image.size());
-	imshow("transformed", transformedIm);
+	// imshow("transformed", transformedIm);
 
+	cv::Mat outputIm(image.rows, image.cols, CV_8UC3);
+	for (int row = 0; row < image.rows; row++) {
+		for (int col = 0; col < image.cols; col++) {
+			cv::Vec3b tVal = transformedIm.at<cv::Vec3b>(row, col);
+			if (tVal(0) == 0 && tVal(1) == 0 && tVal(2) == 0) {
+				outputIm.at<cv::Vec3b>(row, col) = image.at<cv::Vec3b>(row, col);
+			} else {
+				outputIm.at<cv::Vec3b>(row, col) = tVal;
+			}
+		}
+	}
+	imshow("output", outputIm);
 
 	cv::waitKey(0);
 	return 0;
