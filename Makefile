@@ -1,6 +1,8 @@
 export MAKEFLAGS=--no-print-directory
 
-SOURCES := $(shell find . -name "*.cpp")
+SOURCES := BlobDetector.cpp \
+	HsvThreshold.cpp \
+	LineDetector.cpp
 
 # compiler
 CXX := g++
@@ -29,11 +31,16 @@ INCLUDES := -I. `pkg-config --cflags opencv`
 DEPENDENCIES_FILE := dependencies.d
 
 all: directories dependencies
-	@$(MAKE) $(OUTPUT_DIR)/$(OUTPUT)
+	@$(MAKE) $(OUTPUT_DIR)/main
+	@$(MAKE) $(OUTPUT_DIR)/calib
 
-$(OUTPUT_DIR)/$(OUTPUT): $(OBJECTS)
+$(OUTPUT_DIR)/main: $(OBJECTS) $(OBJ_DIR)/main.o
 	@echo "[$@]"
-	@$(CXX) $(CXXFLAGS) $(OBJECTS) $(INCLUDES) $(LDFLAGS) -o $(OUTPUT_DIR)/$(OUTPUT)
+	@$(CXX) $(CXXFLAGS) $^ $(INCLUDES) $(LDFLAGS) -o $@
+
+$(OUTPUT_DIR)/calib: $(OBJECTS) $(OBJ_DIR)/calib.o
+	@echo "[$@]"
+	@$(CXX) $(CXXFLAGS) $^ $(INCLUDES) $(LDFLAGS) -o $@
 
 directories:
 	@mkdir -p $(OBJ_DIR)
@@ -42,7 +49,7 @@ directories:
 dependencies:
 	@$(CXX) -MM $(SOURCES) $(CXXFLAGS) $(INCLUDES) | sed 's|\([a-zA-Z0-9_-]*\)\.o|$(OBJ_DIR)/\1.o|' > $(DEPENDENCIES_FILE)
 
-$(OBJ_DIR)/%.o:
+$(OBJ_DIR)/%.o: %.cpp
 	@echo "[$<]"
 	@$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $(OBJ_DIR)/$(notdir $@)  $<
 
@@ -59,7 +66,7 @@ clean:
 	@find . -name "*.map" -exec rm -f {} \;
 	@find . -name "*.pyc" -exec rm -f {} \;
 	@find . -name "*.d" -exec rm -f {} \;
-	@rm $(OUTPUT_DIR)/$(OUTPUT)
+	@rm -f $(OUTPUT_DIR)/*
 	@echo done
 
 .PHONY: all directories dependencies clean

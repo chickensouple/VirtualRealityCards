@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <string>
 #include <cmath>
 #include <stdint.h>
 #include "LineDetector.hpp"
@@ -15,15 +16,38 @@
 
 using namespace cv;
 
+std::string type2str(int type) {
+	string r;
+
+	uchar depth = type & CV_MAT_DEPTH_MASK;
+	uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+	switch ( depth ) {
+		case CV_8U:  r = "8U"; break;
+		case CV_8S:  r = "8S"; break;
+		case CV_16U: r = "16U"; break;
+		case CV_16S: r = "16S"; break;
+		case CV_32S: r = "32S"; break;
+		case CV_32F: r = "32F"; break;
+		case CV_64F: r = "64F"; break;
+		default:     r = "User"; break;
+	}
+
+	r += "C";
+	r += (chans+'0');
+
+return r;
+}
+
 int main() {
 	cv::Mat image;
-	image = cv::imread("images/im5.jpg", CV_LOAD_IMAGE_COLOR);
+	image = cv::imread("images/im3.jpg", CV_LOAD_IMAGE_COLOR);
 	if(!image.data) {
 		std::cout <<  "Could not open or find the image" << std::endl;
 		return -1;
 	}
 	cv::Mat displayedIm;
-	displayedIm = cv::imread("images/chicken.jpg", CV_LOAD_IMAGE_COLOR);
+	displayedIm = cv::imread("images/endeavor.jpg", CV_LOAD_IMAGE_COLOR);
 	if (!displayedIm.data) {
 		std::cout <<  "Could not open or find the image" << std::endl;
 		return -1;
@@ -48,10 +72,10 @@ int main() {
 
 	if (blueBlobs.size() < 3) {
 		printf("Didn't find enough blue blobs, only found %d\n",
-			blueBlobs.size());
+			(int)blueBlobs.size());
 	}
 	if (redBlobs.size() < 1) {
-		printf("Didn't find enough red blobs, only found%d\n", redBlobs.size());
+		printf("Didn't find enough red blobs, only found%d\n", (int)redBlobs.size());
 	}
 
 	std::sort(blueBlobs.begin(), blueBlobs.end(),
@@ -109,12 +133,84 @@ int main() {
 		imagePts.push_back(cv::Point2f{(float)blob.col, (float)blob.row});
 	}
 	realPts.push_back(cv::Point2f{0, 0});
-	realPts.push_back(cv::Point2f{displayedIm.cols, 0});
-	realPts.push_back(cv::Point2f{displayedIm.cols, displayedIm.rows});
-	realPts.push_back(cv::Point2f{0, displayedIm.rows});
+	realPts.push_back(cv::Point2f{(float)displayedIm.cols, 0});
+	realPts.push_back(cv::Point2f{(float)displayedIm.cols, (float)displayedIm.rows});
+	realPts.push_back(cv::Point2f{0, (float)displayedIm.rows});
 
 	cv::Mat homography = cv::findHomography(realPts, imagePts);
 	std::cout << homography << '\n';
+
+	// double focalX = .1;
+	// double focalY = .1;
+	// double r00 = homography.at<double>(0, 0) / focalX;
+	// double r10 = homography.at<double>(1, 0) / focalY;
+	// double r20 = homography.at<double>(2, 0);
+	// double r01 = homography.at<double>(0, 1) / focalX;
+	// double r11 = homography.at<double>(1, 1) / focalY;
+	// double r21 = homography.at<double>(2, 1);
+	
+	// double s = (std::sqrt(r00 * r00 + r10 * r10 + r20 * r20) + 
+	// 	std::sqrt(r01 * r01 + r11 * r11 + r21 * r21)) / 2.0;
+
+	// r00 /= s;
+	// r10 /= s;
+	// r20 /= s;
+	// r01 /= s;
+	// r11 /= s;
+	// r21 /= s;
+	// // cross product
+	// float r02 = r10 * r21 - r20 * r11;
+	// float r12 = r00 * r21 - r20 * r01;
+	// float r22 = r00 * r11 - r10 * r01;
+	// float tx = homography.at<double>(0, 2) / (s * focalX);
+	// float ty = homography.at<double>(1, 2) / (s * focalY);
+	// float tz = homography.at<double>(2, 2) / s;
+	// cv::Mat transform3d(4, 4, CV_64FC1, Scalar(0));
+	// transform3d.at<double>(0, 0) = r00;
+	// transform3d.at<double>(0, 1) = r01;
+	// transform3d.at<double>(0, 2) = r02;
+	// transform3d.at<double>(0, 3) = tx;
+	// transform3d.at<double>(1, 0) = r10;
+	// transform3d.at<double>(1, 1) = r11;
+	// transform3d.at<double>(1, 2) = r12;
+	// transform3d.at<double>(1, 3) = ty;
+	// transform3d.at<double>(2, 0) = r20;
+	// transform3d.at<double>(2, 1) = r21;
+	// transform3d.at<double>(2, 2) = r22;
+	// transform3d.at<double>(2, 3) = tz;
+	// transform3d.at<double>(3, 3) = 1;
+
+	// cv::Mat intrinsics(3, 4, CV_64FC1, Scalar(0));
+	// intrinsics.at<double>(0, 0) = focalX;
+	// intrinsics.at<double>(1, 1) = focalY;
+	// intrinsics.at<double>(2, 2) = 1;
+
+	// std::vector<std::array<double, 3>> boxPoints{
+	// 	{{0, 0, 0}},
+	// 	{{1, 0, 0}},
+	// 	{{1, 1, 0}},
+	// 	{{0, 1, 0}},
+	// 	{{0, 0, 1}},
+	// 	{{1, 0, 1}},
+	// 	{{1, 1, 1}},
+	// 	{{0, 1, 1}}
+	// };
+
+	// std::vector<cv::Mat> transformedBoxPoints;
+	// for (const auto& point : boxPoints) {
+	// 	cv::Mat pt(4, 1, CV_64FC1);
+	// 	pt.at<double>(0) = point[0];
+	// 	pt.at<double>(1) = point[1];
+	// 	pt.at<double>(2) = point[2];
+	// 	pt.at<double>(3) = 1;
+	// 	printf("%f, %f, %f\n", point[0], point[1], point[2]);
+	// 	cv::Mat newPt = intrinsics * transform3d * pt;
+	// 	printf("%f, %f, %f\n", newPt.at<double>(0), newPt.at<double>(1), newPt.at<double>(2));
+	// 	// std::cout << "blah\n";
+	// 	// std::cout << newPt.at<double>(0);
+	// 	transformedBoxPoints.push_back(newPt);
+	// }
+
 
 	cv::Mat transformedIm;
 	cv::warpPerspective(displayedIm, transformedIm, homography, image.size());
@@ -131,6 +227,12 @@ int main() {
 			}
 		}
 	}
+
+	// for (auto& point : transformedBoxPoints) {
+	// 	cv::Point2i pt(point.at<double>(1), point.at<double>(0));
+	// 	cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
+	// }
+
 	imshow("output", outputIm);
 
 	cv::waitKey(0);
