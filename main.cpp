@@ -151,17 +151,16 @@ int main() {
 	cv::Mat homography = cv::findHomography(realPts, imagePts);
 	std::cout << homography << '\n';
 
-
 ///////////////////////////////////////////
 	std::vector<cv::Point3f> boxPts{
 		{0, 0, 0},
 		{1, 0, 0},
 		{1, 1, 0},
 		{0, 1, 0},
-		{0, 0, 1},
-		{1, 0, 1},
-		{1, 1, 1},
-		{0, 1, 1}
+		{0, 0, 0.5},
+		{1, 0, 0.5},
+		{1, 1, 0.5},
+		{0, 1, 0.5}
 	};
 	std::vector<cv::Point2f> boxBase{
 		{0, 0},
@@ -182,8 +181,8 @@ int main() {
 		std::cout << matPt << ":\t" << homographyBox * matPt << '\n';
 	}
 
-	double focalX = 300;
-	double focalY = 100;
+	double focalX = 2000;
+	double focalY = 1000;
 	double r00 = homographyBox.at<double>(0, 0) / focalX;
 	double r10 = homographyBox.at<double>(1, 0) / focalY;
 	double r20 = homographyBox.at<double>(2, 0);
@@ -241,32 +240,52 @@ int main() {
 		newPt.at<double>(1) /= newPt.at<double>(2);
 		newPt.at<double>(2) = 1;
 		printf("%f, %f, %f\n", newPt.at<double>(0), newPt.at<double>(1), newPt.at<double>(2));
-		// std::cout << "blah\n";
-		// std::cout << newPt.at<double>(0);
 		transformedBoxPoints.push_back(newPt);
 	}
+
 /////////////////////////////////////////////////////
 
 	cv::Mat transformedIm;
 	cv::warpPerspective(displayedIm, transformedIm, homography, image.size());
-	// imshow("transformed", transformedIm);
 
-	cv::Mat outputIm(image.rows + 500, image.cols + 500, CV_8UC3);
-	for (int row = 0; row < image.rows; row++) {
-		for (int col = 0; col < image.cols; col++) {
-			cv::Vec3b tVal = transformedIm.at<cv::Vec3b>(row, col);
-			if (tVal(0) == 0 && tVal(1) == 0 && tVal(2) == 0) {
-				outputIm.at<cv::Vec3b>(row, col) = image.at<cv::Vec3b>(row, col);
-			} else {
-				outputIm.at<cv::Vec3b>(row, col) = tVal;
-			}
-		}
-	}
+	// cv::Mat outputIm(image.rows, image.cols, CV_8UC3);
+	// for (int row = 0; row < image.rows; row++) {
+	// 	for (int col = 0; col < image.cols; col++) {
+	// 		cv::Vec3b tVal = transformedIm.at<cv::Vec3b>(row, col);
+	// 		if (tVal(0) == 0 && tVal(1) == 0 && tVal(2) == 0) {
+	// 			outputIm.at<cv::Vec3b>(row, col) = image.at<cv::Vec3b>(row, col);
+	// 		} else {
+	// 			outputIm.at<cv::Vec3b>(row, col) = tVal;
+	// 		}
+	// 	}
+	// }
+	cv::Mat outputIm = image;
 
+
+	// for (auto& point : transformedBoxPoints) {
+	// 	cv::Point2i pt(point.at<double>(0), point.at<double>(1));
+	// 	cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
+	// }
+
+	// drawing lines for box
+	std::vector<cv::Point2i> transformedBoxPoints2i;
 	for (auto& point : transformedBoxPoints) {
-		cv::Point2i pt(point.at<double>(0), point.at<double>(1));
-		cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
+		transformedBoxPoints2i.push_back(cv::Point2i{(int)point.at<double>(0),
+			(int)point.at<double>(1)});
 	}
+	cv::line(outputIm, transformedBoxPoints2i[0], transformedBoxPoints2i[1], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[1], transformedBoxPoints2i[2], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[2], transformedBoxPoints2i[3], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[0], transformedBoxPoints2i[3], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[4], transformedBoxPoints2i[5], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[5], transformedBoxPoints2i[6], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[6], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[4], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[0], transformedBoxPoints2i[4], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[1], transformedBoxPoints2i[5], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[2], transformedBoxPoints2i[6], cv::Scalar(0, 0, 255), 2);
+	cv::line(outputIm, transformedBoxPoints2i[3], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
+
 
 	imshow("output", outputIm);
 	imwrite("output.jpg", outputIm);
