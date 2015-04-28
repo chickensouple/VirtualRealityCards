@@ -47,7 +47,7 @@ int main() {
 		return -1;
 	}
 	cv::Mat displayedIm;
-	displayedIm = cv::imread("images/endeavor.jpg", CV_LOAD_IMAGE_COLOR);
+	displayedIm = cv::imread("images/chicken.jpg", CV_LOAD_IMAGE_COLOR);
 	if (!displayedIm.data) {
 		std::cout <<  "Could not open or find the image" << std::endl;
 		return -1;
@@ -91,6 +91,17 @@ int main() {
 
 	blueBlobs.resize(3);
 	redBlobs.resize(1);
+
+	cv::Mat blobCircle = image.clone();
+	for (auto& blob : blueBlobs) {
+		cv::circle(blobCircle, cv::Point(blob.col, blob.row), 10, cv::Scalar(0, 0, 0), 3);
+	}
+	for (auto& blob : redBlobs) {
+		cv::circle(blobCircle, cv::Point(blob.col, blob.row), 10, cv::Scalar(0, 0, 0), 3);
+	}
+	cv::imshow("circles", blobCircle);
+	cv::imwrite("circles.jpg", blobCircle);
+
 
 	// getting blobs in clockwise order
 	std::array<int, 2> centroid{{0, 0}};
@@ -140,83 +151,107 @@ int main() {
 	cv::Mat homography = cv::findHomography(realPts, imagePts);
 	std::cout << homography << '\n';
 
-	// double focalX = .1;
-	// double focalY = .1;
-	// double r00 = homography.at<double>(0, 0) / focalX;
-	// double r10 = homography.at<double>(1, 0) / focalY;
-	// double r20 = homography.at<double>(2, 0);
-	// double r01 = homography.at<double>(0, 1) / focalX;
-	// double r11 = homography.at<double>(1, 1) / focalY;
-	// double r21 = homography.at<double>(2, 1);
+
+///////////////////////////////////////////
+	std::vector<cv::Point3f> boxPts{
+		{0, 0, 0},
+		{1, 0, 0},
+		{1, 1, 0},
+		{0, 1, 0},
+		{0, 0, 1},
+		{1, 0, 1},
+		{1, 1, 1},
+		{0, 1, 1}
+	};
+	std::vector<cv::Point2f> boxBase{
+		{0, 0},
+		{1, 0},
+		{1, 1},
+		{0, 1}
+	};
+
+	cv::Mat homographyBox = cv::findHomography(boxBase, imagePts);
+
+	std::cout << homographyBox << '\n';
+
+	for (auto& pt : boxBase) {
+		cv::Mat matPt(3, 1, CV_64FC1);
+		matPt.at<double>(0) = pt.x;
+		matPt.at<double>(1) = pt.y;
+		matPt.at<double>(2) = 1;
+		std::cout << matPt << ":\t" << homographyBox * matPt << '\n';
+	}
+
+	double focalX = 300;
+	double focalY = 100;
+	double r00 = homographyBox.at<double>(0, 0) / focalX;
+	double r10 = homographyBox.at<double>(1, 0) / focalY;
+	double r20 = homographyBox.at<double>(2, 0);
+	double r01 = homographyBox.at<double>(0, 1) / focalX;
+	double r11 = homographyBox.at<double>(1, 1) / focalY;
+	double r21 = homographyBox.at<double>(2, 1);
 	
-	// double s = (std::sqrt(r00 * r00 + r10 * r10 + r20 * r20) + 
-	// 	std::sqrt(r01 * r01 + r11 * r11 + r21 * r21)) / 2.0;
+	double s = (std::sqrt(r00 * r00 + r10 * r10 + r20 * r20) + 
+		std::sqrt(r01 * r01 + r11 * r11 + r21 * r21)) / 2.0;
 
-	// r00 /= s;
-	// r10 /= s;
-	// r20 /= s;
-	// r01 /= s;
-	// r11 /= s;
-	// r21 /= s;
-	// // cross product
-	// float r02 = r10 * r21 - r20 * r11;
-	// float r12 = r00 * r21 - r20 * r01;
-	// float r22 = r00 * r11 - r10 * r01;
-	// float tx = homography.at<double>(0, 2) / (s * focalX);
-	// float ty = homography.at<double>(1, 2) / (s * focalY);
-	// float tz = homography.at<double>(2, 2) / s;
-	// cv::Mat transform3d(4, 4, CV_64FC1, Scalar(0));
-	// transform3d.at<double>(0, 0) = r00;
-	// transform3d.at<double>(0, 1) = r01;
-	// transform3d.at<double>(0, 2) = r02;
-	// transform3d.at<double>(0, 3) = tx;
-	// transform3d.at<double>(1, 0) = r10;
-	// transform3d.at<double>(1, 1) = r11;
-	// transform3d.at<double>(1, 2) = r12;
-	// transform3d.at<double>(1, 3) = ty;
-	// transform3d.at<double>(2, 0) = r20;
-	// transform3d.at<double>(2, 1) = r21;
-	// transform3d.at<double>(2, 2) = r22;
-	// transform3d.at<double>(2, 3) = tz;
-	// transform3d.at<double>(3, 3) = 1;
+	r00 /= s;
+	r10 /= s;
+	r20 /= s;
+	r01 /= s;
+	r11 /= s;
+	r21 /= s;
+	// cross product
+	float r02 = r10 * r21 - r20 * r11;
+	float r12 = r00 * r21 - r20 * r01;
+	float r22 = r00 * r11 - r10 * r01;
+	float tx = homographyBox.at<double>(0, 2) / (s * focalX);
+	float ty = homographyBox.at<double>(1, 2) / (s * focalY);
+	float tz = homographyBox.at<double>(2, 2) / s;
+	cv::Mat transform3d(4, 4, CV_64FC1, Scalar(0));
+	transform3d.at<double>(0, 0) = r00;
+	transform3d.at<double>(0, 1) = r01;
+	transform3d.at<double>(0, 2) = r02;
+	transform3d.at<double>(0, 3) = tx;
+	transform3d.at<double>(1, 0) = r10;
+	transform3d.at<double>(1, 1) = r11;
+	transform3d.at<double>(1, 2) = r12;
+	transform3d.at<double>(1, 3) = ty;
+	transform3d.at<double>(2, 0) = r20;
+	transform3d.at<double>(2, 1) = r21;
+	transform3d.at<double>(2, 2) = r22;
+	transform3d.at<double>(2, 3) = tz;
+	transform3d.at<double>(3, 3) = 1;
+	std::cout << transform3d << '\n';
 
-	// cv::Mat intrinsics(3, 4, CV_64FC1, Scalar(0));
-	// intrinsics.at<double>(0, 0) = focalX;
-	// intrinsics.at<double>(1, 1) = focalY;
-	// intrinsics.at<double>(2, 2) = 1;
+	cv::Mat intrinsics(3, 4, CV_64FC1, Scalar(0));
+	intrinsics.at<double>(0, 0) = focalX;
+	intrinsics.at<double>(1, 1) = focalY;
+	intrinsics.at<double>(2, 2) = 1;
 
-	// std::vector<std::array<double, 3>> boxPoints{
-	// 	{{0, 0, 0}},
-	// 	{{1, 0, 0}},
-	// 	{{1, 1, 0}},
-	// 	{{0, 1, 0}},
-	// 	{{0, 0, 1}},
-	// 	{{1, 0, 1}},
-	// 	{{1, 1, 1}},
-	// 	{{0, 1, 1}}
-	// };
-
-	// std::vector<cv::Mat> transformedBoxPoints;
-	// for (const auto& point : boxPoints) {
-	// 	cv::Mat pt(4, 1, CV_64FC1);
-	// 	pt.at<double>(0) = point[0];
-	// 	pt.at<double>(1) = point[1];
-	// 	pt.at<double>(2) = point[2];
-	// 	pt.at<double>(3) = 1;
-	// 	printf("%f, %f, %f\n", point[0], point[1], point[2]);
-	// 	cv::Mat newPt = intrinsics * transform3d * pt;
-	// 	printf("%f, %f, %f\n", newPt.at<double>(0), newPt.at<double>(1), newPt.at<double>(2));
-	// 	// std::cout << "blah\n";
-	// 	// std::cout << newPt.at<double>(0);
-	// 	transformedBoxPoints.push_back(newPt);
-	// }
-
+	std::vector<cv::Mat> transformedBoxPoints;
+	for (const auto& point : boxPts) {
+		cv::Mat pt(4, 1, CV_64FC1);
+		pt.at<double>(0) = point.x;
+		pt.at<double>(1) = point.y;
+		pt.at<double>(2) = point.z;
+		pt.at<double>(3) = 1;
+		printf("%f, %f, %f:\t", point.x, point.y, point.z);
+		cv::Mat newPt = intrinsics * transform3d * pt;
+		newPt.at<double>(0) /= newPt.at<double>(2);
+		newPt.at<double>(1) /= newPt.at<double>(2);
+		newPt.at<double>(2) = 1;
+		printf("%f, %f, %f\n", newPt.at<double>(0), newPt.at<double>(1), newPt.at<double>(2));
+		// std::cout << "blah\n";
+		// std::cout << newPt.at<double>(0);
+		transformedBoxPoints.push_back(newPt);
+	}
+/////////////////////////////////////////////////////
 
 	cv::Mat transformedIm;
 	cv::warpPerspective(displayedIm, transformedIm, homography, image.size());
 	// imshow("transformed", transformedIm);
 
-	cv::Mat outputIm(image.rows, image.cols, CV_8UC3);
+	cv::Mat outputIm(image.rows + 500, image.cols + 500, CV_8UC3);
 	for (int row = 0; row < image.rows; row++) {
 		for (int col = 0; col < image.cols; col++) {
 			cv::Vec3b tVal = transformedIm.at<cv::Vec3b>(row, col);
@@ -228,12 +263,13 @@ int main() {
 		}
 	}
 
-	// for (auto& point : transformedBoxPoints) {
-	// 	cv::Point2i pt(point.at<double>(1), point.at<double>(0));
-	// 	cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
-	// }
+	for (auto& point : transformedBoxPoints) {
+		cv::Point2i pt(point.at<double>(0), point.at<double>(1));
+		cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
+	}
 
 	imshow("output", outputIm);
+	imwrite("output.jpg", outputIm);
 
 	cv::waitKey(0);
 	return 0;
