@@ -30,6 +30,9 @@ Images are in the images/ directory
 all tag images are imX.jpg
 there are two test display images: chicken.jpg and endeavor.jpg
 
+im2.jpg and im4.jpg have not correct blobs detected so they will mess up
+im1, im3, and im5 will work fine
+
 
 
 If you want to take pictures of the tag to test, a pdf of the tag is included as tag.pdf
