@@ -21,7 +21,7 @@ OUTPUT := main
 OBJECTS = $(addprefix $(OBJ_DIR)/, $(notdir $(SOURCES:.cpp=.o)))
 
 # library flags
-LDFLAGS := `pkg-config --libs opencv`
+LDFLAGS := `pkg-config --libs opencv` -lboost_program_options
 
 # include directories
 INCLUDES := -I. `pkg-config --cflags opencv`

@@ -3,6 +3,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <boost/program_options.hpp>
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -14,28 +15,56 @@
 #include "AngleFunctions.hpp"
 
 using namespace cv;
+using namespace boost::program_options;
 
-int main() {
+void overlayImage(cv::Mat& dest, const cv::Mat& img);
+
+void drawBox(cv::Mat& dest, const std::vector<cv::Mat>& points);
+
+int main(int argc, char** argv) {
+	// command line handling stuff
+	options_description desc("Allowed options");
+	desc.add_options()
+		("tag,t", value<std::string>()->default_value("images/im1.jpg"), "relative path to tag image")
+		("image,i", value<std::string>()->default_value("images/endeavor.jpg"), "relative path to image to be projected");
+	variables_map vm;
+	store(command_line_parser(argc, argv).options(desc).run(), vm);
+
+	// reading in images
 	cv::Mat image;
-	image = cv::imread("images/im4.jpg", CV_LOAD_IMAGE_COLOR);
-	if(!image.data) {
-		std::cout <<  "Could not open or find the image" << std::endl;
+	std::string tagFilePath;
+	if (vm.count("tag")) {
+		tagFilePath = vm["tag"].as<std::string>();
+	} else {
+		printf("not a valid tag file path\n");
 		return -1;
 	}
-	cv::Mat displayedIm;
-	displayedIm = cv::imread("images/endeavor.jpg", CV_LOAD_IMAGE_COLOR);
-	if (!displayedIm.data) {
-		std::cout <<  "Could not open or find the image" << std::endl;
+	image = cv::imread(tagFilePath.c_str(), CV_LOAD_IMAGE_COLOR);
+	if(!image.data) {
+		std::cout <<  "Could not open or find the tag image" << std::endl;
 		return -1;
 	}
 
+	cv::Mat displayedIm;
+	if (vm.count("image")) {
+		std::string imageFilePath = vm["image"].as<std::string>();
+		displayedIm = cv::imread(imageFilePath.c_str(), CV_LOAD_IMAGE_COLOR);
+		if (!displayedIm.data) {
+			std::cout <<  "Could not open or find the projected image" << std::endl;
+			return -1;
+		}
+	}
+
+	// thresholds for HSV
 	std::array<float, 6> redThresh{{170, 10, 150, 255, 100, 255}};
 	std::array<float, 6> blueThresh{{100, 150, 0, 255, 0, 255}};
 
+	// getting blobs
 	std::vector<BlobDetector::Blob> blobs = BlobDetector::detect(image, 
 		std::vector<std::array<float, 6>>{redThresh, blueThresh},
 		100);
 
+	// separating red and blue blobs
 	std::vector<BlobDetector::Blob> redBlobs;
 	std::vector<BlobDetector::Blob> blueBlobs;
 	for (auto& blob : blobs) {
@@ -54,6 +83,7 @@ int main() {
 		printf("Didn't find enough red blobs, only found%d\n", (int)redBlobs.size());
 	}
 
+	// getting biggest blobs
 	std::sort(blueBlobs.begin(), blueBlobs.end(),
 		[](const BlobDetector::Blob& A, 
 			const BlobDetector::Blob& B) {
@@ -68,6 +98,7 @@ int main() {
 	blueBlobs.resize(3);
 	redBlobs.resize(1);
 
+	// drawing circles around blobs
 	cv::Mat blobCircle = image.clone();
 	for (auto& blob : blueBlobs) {
 		cv::circle(blobCircle, cv::Point(blob.col, blob.row), 10, cv::Scalar(0, 0, 0), 3);
@@ -101,21 +132,11 @@ int main() {
 		
 			float diff1 = angle::wrapToTwoPi(angle1 - startAngle);
 			float diff2 = angle::wrapToTwoPi(angle2 - startAngle);
-			// printf("blob: %d, %d: %f\n", A.col, A.row, diff1 * 180.0 / 3.1415);
-			// printf("blob: %d, %d: %f\n", B.col, B.row, diff2 * 180.0 / 3.1415);
 			return diff1 < diff2;
 		});
 
-	// printf("start Blob: %d, %d\n", redBlobs[0].col, redBlobs[0].row);
-	// printf("centroid: %d, %d\n", centroid[1], centroid[0]);
-	// printf("start angle: %f\n", startAngle);
-	// for (auto& blob : blueBlobs) {
-	// 	printf("%d, %d\n", blob.col, blob.row);
-	// }
-
-
 	cv::imshow("circles", blobCircle);
-	cv::imwrite("circles.jpg", blobCircle);
+	// cv::imwrite("circles.jpg", blobCircle);
 
 	// calculating homography
 	std::vector<cv::Point2f> imagePts;
@@ -151,18 +172,17 @@ int main() {
 		{0, 1}
 	};
 
+	// getting homography to box base
 	cv::Mat homographyBox = cv::findHomography(boxBase, imagePts);
-
-	// std::cout << homographyBox << '\n';
 
 	for (auto& pt : boxBase) {
 		cv::Mat matPt(3, 1, CV_64FC1);
 		matPt.at<double>(0) = pt.x;
 		matPt.at<double>(1) = pt.y;
 		matPt.at<double>(2) = 1;
-		// std::cout << matPt << ":\t" << homographyBox * matPt << '\n';
 	}
 
+	// calculating extrinsics matrix
 	double focalX = 2000;
 	double focalY = 1000;
 	double r00 = homographyBox.at<double>(0, 0) / focalX;
@@ -209,6 +229,7 @@ int main() {
 	intrinsics.at<double>(1, 1) = focalY;
 	intrinsics.at<double>(2, 2) = 1;
 
+	// transforming box points
 	std::vector<cv::Mat> transformedBoxPoints;
 	for (const auto& point : boxPts) {
 		cv::Mat pt(4, 1, CV_64FC1);
@@ -216,12 +237,10 @@ int main() {
 		pt.at<double>(1) = point.y;
 		pt.at<double>(2) = point.z;
 		pt.at<double>(3) = 1;
-		// printf("%f, %f, %f:\t", point.x, point.y, point.z);
 		cv::Mat newPt = intrinsics * transform3d * pt;
 		newPt.at<double>(0) /= newPt.at<double>(2);
 		newPt.at<double>(1) /= newPt.at<double>(2);
 		newPt.at<double>(2) = 1;
-		// printf("%f, %f, %f, %f\n", newPt.at<double>(0), newPt.at<double>(1), newPt.at<double>(2));
 		transformedBoxPoints.push_back(newPt);
 	}
 
@@ -230,48 +249,45 @@ int main() {
 	cv::Mat transformedIm;
 	cv::warpPerspective(displayedIm, transformedIm, homography, image.size());
 
-	// cv::Mat outputIm(image.rows, image.cols, CV_8UC3);
-	// for (int row = 0; row < image.rows; row++) {
-	// 	for (int col = 0; col < image.cols; col++) {
-	// 		cv::Vec3b tVal = transformedIm.at<cv::Vec3b>(row, col);
-	// 		if (tVal(0) == 0 && tVal(1) == 0 && tVal(2) == 0) {
-	// 			outputIm.at<cv::Vec3b>(row, col) = image.at<cv::Vec3b>(row, col);
-	// 		} else {
-	// 			outputIm.at<cv::Vec3b>(row, col) = tVal;
-	// 		}
-	// 	}
-	// }
 	cv::Mat outputIm = image;
-
-
-	for (auto& point : transformedBoxPoints) {
-		cv::Point2i pt(point.at<double>(0), point.at<double>(1));
-		cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
-	}
-
-	// drawing lines for box
-	std::vector<cv::Point2i> transformedBoxPoints2i;
-	for (auto& point : transformedBoxPoints) {
-		transformedBoxPoints2i.push_back(cv::Point2i{(int)point.at<double>(0),
-			(int)point.at<double>(1)});
-	}
-	cv::line(outputIm, transformedBoxPoints2i[0], transformedBoxPoints2i[1], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[1], transformedBoxPoints2i[2], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[2], transformedBoxPoints2i[3], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[0], transformedBoxPoints2i[3], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[4], transformedBoxPoints2i[5], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[5], transformedBoxPoints2i[6], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[6], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[4], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[0], transformedBoxPoints2i[4], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[1], transformedBoxPoints2i[5], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[2], transformedBoxPoints2i[6], cv::Scalar(0, 0, 255), 2);
-	cv::line(outputIm, transformedBoxPoints2i[3], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
-
+	overlayImage(outputIm, transformedIm);
+	drawBox(outputIm, transformedBoxPoints);
 
 	imshow("output", outputIm);
-	imwrite("output.jpg", outputIm);
+	// imwrite("output.jpg", outputIm);
 
 	cv::waitKey(0);
 	return 0;
 }
+
+void overlayImage(cv::Mat& dest, const cv::Mat& img) {
+	for (int row = 0; row < dest.rows; row++) {
+		for (int col = 0; col < dest.cols; col++) {
+			cv::Vec3b tVal = img.at<cv::Vec3b>(row, col);
+			if (tVal(0) != 0 || tVal(1) != 0 || tVal(2) != 0) {
+				dest.at<cv::Vec3b>(row, col) = tVal;
+			}
+		}
+	}
+}
+
+void drawBox(cv::Mat& dest, const std::vector<cv::Mat>& points) {
+	std::vector<cv::Point2i> transformedBoxPoints2i;
+	for (auto& point : points) {
+		transformedBoxPoints2i.push_back(cv::Point2i{(int)point.at<double>(0),
+			(int)point.at<double>(1)});
+	}
+	cv::line(dest, transformedBoxPoints2i[0], transformedBoxPoints2i[1], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[1], transformedBoxPoints2i[2], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[2], transformedBoxPoints2i[3], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[0], transformedBoxPoints2i[3], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[4], transformedBoxPoints2i[5], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[5], transformedBoxPoints2i[6], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[6], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[4], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[0], transformedBoxPoints2i[4], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[1], transformedBoxPoints2i[5], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[2], transformedBoxPoints2i[6], cv::Scalar(0, 0, 255), 2);
+	cv::line(dest, transformedBoxPoints2i[3], transformedBoxPoints2i[7], cv::Scalar(0, 0, 255), 2);
+}
+
