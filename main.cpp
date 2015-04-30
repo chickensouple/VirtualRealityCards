@@ -11,43 +11,19 @@
 #include <stdint.h>
 #include "LineDetector.hpp"
 #include "BlobDetector.hpp"
-#include "HsvThreshold.hpp"
 #include "AngleFunctions.hpp"
 
 using namespace cv;
 
-std::string type2str(int type) {
-	string r;
-
-	uchar depth = type & CV_MAT_DEPTH_MASK;
-	uchar chans = 1 + (type >> CV_CN_SHIFT);
-
-	switch ( depth ) {
-		case CV_8U:  r = "8U"; break;
-		case CV_8S:  r = "8S"; break;
-		case CV_16U: r = "16U"; break;
-		case CV_16S: r = "16S"; break;
-		case CV_32S: r = "32S"; break;
-		case CV_32F: r = "32F"; break;
-		case CV_64F: r = "64F"; break;
-		default:     r = "User"; break;
-	}
-
-	r += "C";
-	r += (chans+'0');
-
-return r;
-}
-
 int main() {
 	cv::Mat image;
-	image = cv::imread("images/im3.jpg", CV_LOAD_IMAGE_COLOR);
+	image = cv::imread("images/im4.jpg", CV_LOAD_IMAGE_COLOR);
 	if(!image.data) {
 		std::cout <<  "Could not open or find the image" << std::endl;
 		return -1;
 	}
 	cv::Mat displayedIm;
-	displayedIm = cv::imread("images/chicken.jpg", CV_LOAD_IMAGE_COLOR);
+	displayedIm = cv::imread("images/endeavor.jpg", CV_LOAD_IMAGE_COLOR);
 	if (!displayedIm.data) {
 		std::cout <<  "Could not open or find the image" << std::endl;
 		return -1;
@@ -99,9 +75,6 @@ int main() {
 	for (auto& blob : redBlobs) {
 		cv::circle(blobCircle, cv::Point(blob.col, blob.row), 10, cv::Scalar(0, 0, 0), 3);
 	}
-	cv::imshow("circles", blobCircle);
-	cv::imwrite("circles.jpg", blobCircle);
-
 
 	// getting blobs in clockwise order
 	std::array<int, 2> centroid{{0, 0}};
@@ -117,23 +90,32 @@ int main() {
 	centroid[1] /= (blueBlobs.size() + redBlobs.size());
 	float startAngle = std::atan2(redBlobs[0].row - centroid[0],
 		redBlobs[0].col - centroid[1]);
+
 	std::sort(blueBlobs.begin(), blueBlobs.end(),
 		[&](const BlobDetector::Blob& A,
 			const BlobDetector::Blob& B) {
 			float angle1 = std::atan2(A.row - centroid[0],
 				A.col - centroid[1]);
-			float angle2 = std::atan2(A.row - centroid[0],
-				A.col - centroid[1]);
+			float angle2 = std::atan2(B.row - centroid[0],
+				B.col - centroid[1]);
 		
-			float diff1 = angle::wrapToTwoPi(angle::angleDiffRadians(angle1, startAngle));
-			float diff2 = angle::wrapToTwoPi(angle::angleDiffRadians(angle2, startAngle));
+			float diff1 = angle::wrapToTwoPi(angle1 - startAngle);
+			float diff2 = angle::wrapToTwoPi(angle2 - startAngle);
+			// printf("blob: %d, %d: %f\n", A.col, A.row, diff1 * 180.0 / 3.1415);
+			// printf("blob: %d, %d: %f\n", B.col, B.row, diff2 * 180.0 / 3.1415);
 			return diff1 < diff2;
 		});
 
 	// printf("start Blob: %d, %d\n", redBlobs[0].col, redBlobs[0].row);
+	// printf("centroid: %d, %d\n", centroid[1], centroid[0]);
+	// printf("start angle: %f\n", startAngle);
 	// for (auto& blob : blueBlobs) {
 	// 	printf("%d, %d\n", blob.col, blob.row);
 	// }
+
+
+	cv::imshow("circles", blobCircle);
+	cv::imwrite("circles.jpg", blobCircle);
 
 	// calculating homography
 	std::vector<cv::Point2f> imagePts;
@@ -171,14 +153,14 @@ int main() {
 
 	cv::Mat homographyBox = cv::findHomography(boxBase, imagePts);
 
-	std::cout << homographyBox << '\n';
+	// std::cout << homographyBox << '\n';
 
 	for (auto& pt : boxBase) {
 		cv::Mat matPt(3, 1, CV_64FC1);
 		matPt.at<double>(0) = pt.x;
 		matPt.at<double>(1) = pt.y;
 		matPt.at<double>(2) = 1;
-		std::cout << matPt << ":\t" << homographyBox * matPt << '\n';
+		// std::cout << matPt << ":\t" << homographyBox * matPt << '\n';
 	}
 
 	double focalX = 2000;
@@ -234,12 +216,12 @@ int main() {
 		pt.at<double>(1) = point.y;
 		pt.at<double>(2) = point.z;
 		pt.at<double>(3) = 1;
-		printf("%f, %f, %f:\t", point.x, point.y, point.z);
+		// printf("%f, %f, %f:\t", point.x, point.y, point.z);
 		cv::Mat newPt = intrinsics * transform3d * pt;
 		newPt.at<double>(0) /= newPt.at<double>(2);
 		newPt.at<double>(1) /= newPt.at<double>(2);
 		newPt.at<double>(2) = 1;
-		printf("%f, %f, %f\n", newPt.at<double>(0), newPt.at<double>(1), newPt.at<double>(2));
+		// printf("%f, %f, %f, %f\n", newPt.at<double>(0), newPt.at<double>(1), newPt.at<double>(2));
 		transformedBoxPoints.push_back(newPt);
 	}
 
@@ -262,10 +244,10 @@ int main() {
 	cv::Mat outputIm = image;
 
 
-	// for (auto& point : transformedBoxPoints) {
-	// 	cv::Point2i pt(point.at<double>(0), point.at<double>(1));
-	// 	cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
-	// }
+	for (auto& point : transformedBoxPoints) {
+		cv::Point2i pt(point.at<double>(0), point.at<double>(1));
+		cv::circle(outputIm, pt, 5, cv::Scalar(0, 0, 255));
+	}
 
 	// drawing lines for box
 	std::vector<cv::Point2i> transformedBoxPoints2i;

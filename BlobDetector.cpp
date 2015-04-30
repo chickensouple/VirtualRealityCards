@@ -17,12 +17,6 @@ findAndMarkBlob(const cv::Mat& im, cv::Mat& marked,
 
 std::array<int, 2> findCentroid(const std::vector<std::array<int, 2>>& points);
 
-void my_mouse_callback( int event, int x, int y, int flags, void* param ) {
-	if(event==CV_EVENT_LBUTTONDOWN){
-		printf("clicked at point %d, %d\n", x, y);
-	}
-}
-
 std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 6>>& thresholds, int minSize) {
 
 	std::vector<Blob> blobs;
@@ -50,30 +44,9 @@ std::vector<Blob> detect(const cv::Mat& im, const std::vector<std::array<float, 
 					}
 
 				}
-				// if (angle::angleBetween(thresh[0], thresh[1], hsvVal(0)) &&
-				// 	hsvVal(1) > thresh[2] &&
-				// 	hsvVal(1) < thresh[3] &&
-				// 	hsvVal(2) > thresh[4] &&
-				// 	hsvVal(2) < thresh[5]) {
-				// 	temp.at<cv::Vec3b>(row, col) = cv::Vec3b{255, 255, 255};
-				// }
 			}
 		}
 	}
-	// std::cout << "found " << blobs.size() << " blobs\n";
-
-	// cv::imshow("original", im);
-	// cv::Mat imCpy = im;
-	// for (auto& blob : blobs) {
-	// 	cv::circle(imCpy, cv::Point{blob.col, blob.row}, 10, cv::Scalar(0, 0, 255));
-	// 	printf("Blob -- threshNum: %d at (%d, %d) of size %d\n", blob.threshNum,
-	// 		blob.row, blob.col, blob.numPixels);
-	// }
-
-	// cv::imshow("blobs", imCpy);
-
-	// cv::imshow("thresholded", temp);
-
 	return blobs;
 }
 

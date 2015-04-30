@@ -31,9 +31,6 @@ std::vector<std::array<float, 2>> detect(const cv::Mat& im,
 	cv::Mat gradientOrientation;
 	cv::phase(xDeriv, yDeriv, gradientOrientation, false);
 
-	// cv::imshow("mag", normalizedGradientMag);
-	// cv::imshow("grad", gradientOrientation);
-
 	float maxRadius = std::sqrt(im.rows * im.rows + im.cols * im.cols);
 	cv::Mat houghMatrix(numRadiusBins, numAngleBins, CV_16UC1, cv::Scalar(0));
 	float radiusBinWidth = numRadiusBins / maxRadius;
@@ -59,47 +56,6 @@ std::vector<std::array<float, 2>> detect(const cv::Mat& im,
 	cv::Mat normalizedHoughMatrix;
 	cv::normalize(houghMatrix, normalizedHoughMatrix, 0, 1, cv::NORM_MINMAX, CV_32FC1);
 	cv::imshow("hough", normalizedHoughMatrix);
-
-	// std::vector<cv::Vec4i> lines;
-	// cv::HoughLinesP(houghBinary, lines, 1, CV_PI/180, 225, 50, 6);
-	// cv::Mat imCpy(im.rows, im.cols, CV_8UC1, cv::Scalar(0));
-	// std::cout << "number of lines: " << lines.size() << '\n';
-
-	// for( size_t i = 0; i < lines.size(); i++ )
-	// {
-	// 	cv::line(imCpy, cv::Point(lines[i][0], lines[i][1]),
-	// 		cv::Point(lines[i][2], lines[i][3]), cv::Scalar(255), 3, 8 );
-	// }
-	// cv::imshow("im", imCpy);
-
-	// std::vector<cv::Vec2f> lines;
-	// cv::HoughLines(houghBinary, lines, 7, M_PI / 300, 800);
-	// std::cout << "number of lines: " << lines.size() << '\n';
-	// // for (auto& line : lines) {
-
-	// // }
-	// cv::Mat lineMat(im.rows, im.cols, CV_8UC3, cv::Scalar(0, 0, 0));
-	// for( size_t i = 0; i < lines.size(); i++)
-	// {
-	// 	float rho = lines[i][0], theta = lines[i][1];
-	// 	cv::Point pt1, pt2;
-	// 	double a = cos(theta), b = sin(theta);
-	// 	double x0 = a*rho, y0 = b*rho;
-	// 	pt1.x = cvRound(x0 + 1000*(-b));
-	// 	pt1.y = cvRound(y0 + 1000*(a));
-	// 	pt2.x = cvRound(x0 - 1000*(-b));
-	// 	pt2.y = cvRound(y0 - 1000*(a));
-	// 	line(lineMat, pt1, pt2, cv::Scalar(0,0,255), 3, CV_AA);
-	// }
-
-	// cv::imshow("im", lineMat);
-	// cv::waitKey(0);
-
-	// cv::imshow("hough thresholded", houghBinary);
-	// cv::waitKey(0);
-
-	
-	// cv::waitKey(0);
 
 	return std::vector<std::array<float, 2>>{{}};
 }

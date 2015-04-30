@@ -1,7 +1,6 @@
 export MAKEFLAGS=--no-print-directory
 
 SOURCES := BlobDetector.cpp \
-	HsvThreshold.cpp \
 	LineDetector.cpp
 
 # compiler
