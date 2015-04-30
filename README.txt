@@ -8,7 +8,7 @@ On Ubuntu 14.04, these can both easily be installed through a package manager su
 libopencv-dev
 libboost-all-dev
 
-This project also uses c++11, and was tested with g++ version 4.8.2
+This project also uses c++11 and was tested with g++ version 4.8.2
 
 
 How to build
